@@ -1,0 +1,270 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "LegalDost Admin API",
+    "version": "1.0.0",
+    "description": "API documentation for LegalDost Phase 1: Admin Panel & Lawyer Management Services"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "admin_token"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "type": "object" },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": { "type": "integer" },
+              "limit": { "type": "integer" },
+              "total": { "type": "integer" },
+              "totalPages": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "ApiError": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "message": { "type": "string" },
+          "errors": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "superadmin@legaldost.com" },
+          "password": { "type": "string", "format": "password", "example": "SuperAdmin@LegalDost2026!" }
+        }
+      },
+      "CreateLawyerRequest": {
+        "type": "object",
+        "required": [
+          "fullName",
+          "email",
+          "phone",
+          "languages",
+          "barEnrollmentNumber",
+          "barCouncil",
+          "enrollmentState",
+          "yearsOfExperience",
+          "practiceAreas",
+          "officeAddress",
+          "city",
+          "state",
+          "pincode"
+        ],
+        "properties": {
+          "fullName": { "type": "string", "example": "Adv. Rajesh Kumar" },
+          "email": { "type": "string", "format": "email", "example": "rajesh.kumar@lawchambers.in" },
+          "phone": { "type": "string", "example": "+919876543210" },
+          "profileImage": { "type": "string", "format": "uri" },
+          "gender": { "type": "string", "enum": ["male", "female", "other", "prefer_not_to_say"] },
+          "languages": { "type": "array", "items": { "type": "string" }, "example": ["English", "Hindi"] },
+          "barEnrollmentNumber": { "type": "string", "example": "D/1234/2015" },
+          "barCouncil": { "type": "string", "example": "Bar Council of Delhi" },
+          "enrollmentState": { "type": "string", "example": "Delhi" },
+          "yearsOfExperience": { "type": "integer", "example": 9 },
+          "practiceAreas": { "type": "array", "items": { "type": "string" }, "example": ["Criminal Law", "Corporate Law"] },
+          "professionalBio": { "type": "string", "example": "Experienced litigator handling civil disputes, corporate compliance, and criminal trials." },
+          "officeAddress": {
+            "type": "object",
+            "properties": {
+              "addressLine1": { "type": "string", "example": "Chamber 402, High Court Complex" },
+              "addressLine2": { "type": "string", "example": "Sher Shah Road" },
+              "landmark": { "type": "string", "example": "Near Gate No. 2" }
+            }
+          },
+          "city": { "type": "string", "example": "New Delhi" },
+          "state": { "type": "string", "example": "Delhi" },
+          "pincode": { "type": "string", "example": "110003" }
+        }
+      },
+      "UpdateVerificationRequest": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string", "enum": ["under_review", "verified", "rejected"] },
+          "verificationNotes": { "type": "string", "example": "Credentials confirmed with Bar Council roster" },
+          "rejectionReason": { "type": "string", "example": "Bar enrollment certificate is blurry" }
+        }
+      },
+      "UpdateAccountStatusRequest": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string", "enum": ["active", "suspended", "inactive"] },
+          "reason": { "type": "string", "example": "Temporary leave of absence requested" }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Platform Health Check",
+        "responses": {
+          "200": { "description": "Backend service is operational" }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Admin Login",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Authentication successful and HttpOnly cookie set" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "summary": "Get Current Authenticated Admin Profile",
+        "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Admin profile data" },
+          "401": { "description": "Unauthenticated" }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "summary": "Admin Logout",
+        "responses": {
+          "200": { "description": "Logged out successfully" }
+        }
+      }
+    },
+    "/api/v1/admin/dashboard/stats": {
+      "get": {
+        "summary": "Get Platform Metrics and Stats",
+        "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Aggregated platform statistics" }
+        }
+      }
+    },
+    "/api/v1/admin/lawyers": {
+      "get": {
+        "summary": "List Lawyers with Search and Filters",
+        "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } },
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "verificationStatus", "in": "query", "schema": { "type": "string", "enum": ["pending", "under_review", "verified", "rejected"] } },
+          { "name": "accountStatus", "in": "query", "schema": { "type": "string", "enum": ["active", "suspended", "inactive"] } },
+          { "name": "practiceArea", "in": "query", "schema": { "type": "string" } },
+          { "name": "state", "in": "query", "schema": { "type": "string" } },
+          { "name": "city", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Paginated lawyers list" }
+        }
+      },
+      "post": {
+        "summary": "Create Lawyer Profile",
+        "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateLawyerRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Lawyer created successfully" },
+          "409": { "description": "Duplicate email or bar enrollment number" }
+        }
+      }
+    },
+    "/api/v1/admin/lawyers/{id}": {
+      "get": {
+        "summary": "Get Lawyer Details by ID",
+        "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Full lawyer details" },
+          "404": { "description": "Lawyer not found" }
+        }
+      },
+      "patch": {
+        "summary": "Update Lawyer Profile Information",
+        "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Lawyer updated successfully" }
+        }
+      },
+      "delete": {
+        "summary": "Soft-delete / Archive Lawyer",
+        "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Lawyer archived successfully" }
+        }
+      }
+    },
+    "/api/v1/admin/lawyers/{id}/verification": {
+      "patch": {
+        "summary": "Update Lawyer Verification Status",
+        "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateVerificationRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Verification status updated" },
+          "400": { "description": "Invalid status transition or missing rejection reason" }
+        }
+      }
+    },
+    "/api/v1/admin/lawyers/{id}/status": {
+      "patch": {
+        "summary": "Update Lawyer Account Status",
+        "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateAccountStatusRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Account status updated" }
+        }
+      }
+    },
+    "/api/v1/admin/audit-logs": {
+      "get": {
+        "summary": "List Admin Audit Trail Logs",
+        "security": [{ "cookieAuth": [] }, { "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Audit trail entries" }
+        }
+      }
+    }
+  }
+}
+
