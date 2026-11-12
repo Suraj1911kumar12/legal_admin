@@ -9,9 +9,7 @@ export const setupTestDb = () => {
   beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
     const uri = mongoServer.getUri();
-    await mongoose.connect(uri, {
-      driverInfo: { name: 'node', version: '1.0' }
-    });
+    await mongoose.connect(uri);
   }, 60000);
 
   afterAll(async () => {

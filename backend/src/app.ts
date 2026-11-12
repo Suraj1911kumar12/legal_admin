@@ -11,6 +11,7 @@ import { lawyerRoutes } from './modules/lawyers/lawyer.routes';
 import { dashboardRoutes } from './modules/dashboard/dashboard.routes';
 import { auditRoutes } from './modules/audit/audit.routes';
 import { lawyerPortalRoutes } from './modules/lawyerPortal/lawyerPortal.routes';
+import { customerRoutes } from './modules/customers/customer.routes';
 import swaggerDocument from './docs/swagger.json';
 import { sendSuccess } from './utils/response';
 import crypto from 'crypto';
@@ -80,6 +81,7 @@ app.use('/api/v1/admin/lawyers', lawyerRoutes);
 app.use('/api/v1/admin/dashboard', dashboardRoutes);
 app.use('/api/v1/admin/audit-logs', auditRoutes);
 app.use('/api/v1/lawyer', lawyerPortalRoutes);
+app.use('/api/v1/customer', customerRoutes);
 
 // Fallback 404 for unknown routes
 app.use(notFound);

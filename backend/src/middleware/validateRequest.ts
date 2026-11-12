@@ -16,29 +16,21 @@ export const validateRequest = (schemas: RequestValidationSchema) => {
       }
       if (schemas.query) {
         const parsedQuery = await schemas.query.parseAsync(req.query);
-        try {
-          req.query = parsedQuery;
-        } catch {
-          Object.defineProperty(req, 'query', {
-            value: parsedQuery,
-            writable: true,
-            configurable: true,
-            enumerable: true
-          });
-        }
+        Object.defineProperty(req, 'query', {
+          value: parsedQuery,
+          writable: true,
+          configurable: true,
+          enumerable: true
+        });
       }
       if (schemas.params) {
         const parsedParams = await schemas.params.parseAsync(req.params);
-        try {
-          req.params = parsedParams;
-        } catch {
-          Object.defineProperty(req, 'params', {
-            value: parsedParams,
-            writable: true,
-            configurable: true,
-            enumerable: true
-          });
-        }
+        Object.defineProperty(req, 'params', {
+          value: parsedParams,
+          writable: true,
+          configurable: true,
+          enumerable: true
+        });
       }
       next();
     } catch (error) {

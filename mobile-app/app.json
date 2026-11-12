@@ -1,0 +1,68 @@
+{
+  "expo": {
+    "name": "LegalDost",
+    "slug": "legaldost",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "legaldost",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.legaldost.app",
+      "supportsTablet": true,
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSCameraUsageDescription": "LegalDost uses the camera only when you choose to take a photo of a legal document.",
+        "NSPhotoLibraryUsageDescription": "LegalDost accesses your photo library when you select a document image to upload."
+      }
+    },
+    "android": {
+      "package": "com.legaldost.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#203D35",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F5F1E8",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 96
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow LegalDost to access your photos so you can attach legal documents.",
+          "cameraPermission": "Allow LegalDost to use the camera when capturing a document photo."
+        }
+      ],
+      "expo-document-picker",
+      [
+        "expo-notifications",
+        {
+          "color": "#203D35"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

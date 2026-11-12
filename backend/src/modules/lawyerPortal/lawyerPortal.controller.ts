@@ -133,7 +133,7 @@ export class LawyerPortalController {
 
   static async getDashboardActivity(req: Request, res: Response) {
     if (!req.lawyer) throw ApiError.unauthorized();
-    const notifications = await Notification.find({ recipientId: req.lawyer._id })
+    const notifications = await Notification.find({ recipientId: req.lawyer._id, recipientType: 'lawyer' })
       .sort({ createdAt: -1 })
       .limit(10);
     return sendSuccess(res, 200, 'Recent activities retrieved', notifications);
@@ -149,6 +149,7 @@ export class LawyerPortalController {
     const pagination = getPaginationOptions(req.query);
 
     const filter: Record<string, any> = {
+      isDraft: { $ne: true },
       $or: [
         { assignedLawyerId: lawyerId },
         { status: 'pending', 'declinedBy.lawyerId': { $ne: lawyerId } }
@@ -248,8 +249,12 @@ export class LawyerPortalController {
       matterReference,
       title: `${updatedQuery.category}: ${updatedQuery.summary.substring(0, 60)}...`,
       category: updatedQuery.category,
+      description: updatedQuery.summary,
+      aiSummary: updatedQuery.intakeSummary?.aiSummary || '',
+      importantFacts: updatedQuery.intakeSummary?.confirmedFacts || [],
       status: 'active',
       lawyerId,
+      customerId: updatedQuery.customerId || null,
       customer: {
         name: updatedQuery.customerName,
         email: updatedQuery.customerEmail,
@@ -270,20 +275,52 @@ export class LawyerPortalController {
           createdAt: new Date(),
           isShared: true
         }
+      ],
+      timeline: [
+        {
+          title: 'Problem submitted',
+          description: `Submitted query ${updatedQuery.queryReference}`,
+          eventType: 'problem_submitted',
+          createdAt: updatedQuery.createdAt
+        },
+        {
+          title: 'Lawyer assigned',
+          description: `Advocate ${req.lawyer.fullName} accepted your query`,
+          eventType: 'lawyer_assigned',
+          createdAt: new Date()
+        }
       ]
     });
 
     updatedQuery.associatedMatterId = newMatter._id as any;
     await updatedQuery.save();
 
-    // Create Notification
+    await DocumentRecord.updateMany(
+      { queryId: updatedQuery._id },
+      { $set: { matterId: newMatter._id, lawyerId } }
+    );
+
+    // Create Notification for Lawyer
     await Notification.create({
       recipientId: lawyerId,
+      recipientType: 'lawyer',
       title: 'Query Accepted',
       message: `You accepted query ${updatedQuery.queryReference}. Matter ${matterReference} has been created.`,
       type: 'matter',
       link: `/matters/${newMatter._id}`
     });
+
+    // Notify Customer if registered
+    if (updatedQuery.customerId) {
+      await Notification.create({
+        recipientId: updatedQuery.customerId,
+        recipientType: 'customer',
+        title: 'Lawyer Accepted Your Query',
+        message: `Advocate ${req.lawyer.fullName} accepted your legal problem and opened matter ${matterReference}.`,
+        type: 'matter',
+        link: `/matters/${newMatter._id}`
+      });
+    }
 
     return sendSuccess(res, 200, 'Query accepted successfully and legal matter created', {
       query: updatedQuery,
@@ -612,6 +649,17 @@ export class LawyerPortalController {
     conv.unreadCountCustomer += 1;
     await conv.save();
 
+    if (conv.customerId) {
+      await Notification.create({
+        recipientId: conv.customerId,
+        recipientType: 'customer',
+        title: `New message from ${req.lawyer.fullName}`,
+        message: content.trim().slice(0, 100),
+        type: 'message',
+        link: `/messages/${conv._id}`
+      });
+    }
+
     return sendSuccess(res, 201, 'Message sent successfully', message);
   }
 
@@ -688,6 +736,30 @@ export class LawyerPortalController {
     if (meetingLink) consultation.meetingLink = meetingLink;
     await consultation.save();
 
+    if (consultation.customerId) {
+      await Notification.create({
+        recipientId: consultation.customerId,
+        recipientType: 'customer',
+        title: 'Consultation Confirmed',
+        message: `${req.lawyer.fullName} confirmed your consultation for ${consultation.time}.`,
+        type: 'consultation',
+        link: `/consultations/${consultation._id}`
+      });
+    }
+
+    if (consultation.matterId) {
+      await Matter.findByIdAndUpdate(consultation.matterId, {
+        $push: {
+          timeline: {
+            title: 'Consultation accepted',
+            description: `Confirmed by ${req.lawyer.fullName} for ${consultation.time}`,
+            eventType: 'consultation',
+            createdAt: new Date()
+          }
+        }
+      });
+    }
+
     return sendSuccess(res, 200, 'Consultation accepted', consultation);
   }
 
@@ -704,6 +776,17 @@ export class LawyerPortalController {
     consultation.status = 'cancelled';
     consultation.declineReason = reason || 'Lawyer unavailable at requested time';
     await consultation.save();
+
+    if (consultation.customerId) {
+      await Notification.create({
+        recipientId: consultation.customerId,
+        recipientType: 'customer',
+        title: 'Consultation Update',
+        message: `Your consultation request with ${req.lawyer.fullName} was declined: ${consultation.declineReason}`,
+        type: 'consultation',
+        link: `/consultations/${consultation._id}`
+      });
+    }
 
     return sendSuccess(res, 200, 'Consultation cancelled', consultation);
   }

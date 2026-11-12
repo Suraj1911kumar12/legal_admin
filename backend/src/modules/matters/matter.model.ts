@@ -37,6 +37,20 @@ export interface IImportantDate {
   description?: string;
 }
 
+export interface IMatterTimelineEvent {
+  _id?: Types.ObjectId;
+  title: string;
+  description?: string;
+  eventType:
+    | 'problem_submitted'
+    | 'document_uploaded'
+    | 'ai_analysis'
+    | 'lawyer_assigned'
+    | 'consultation'
+    | 'matter_updated';
+  createdAt: Date;
+}
+
 export interface IMatterCustomer {
   name: string;
   email: string;
@@ -47,14 +61,21 @@ export interface IMatter extends Document {
   matterReference: string;
   title: string;
   category: string;
+  description?: string;
+  aiSummary?: string;
+  importantFacts?: string[];
+  selectedSolution?: string;
   status: MatterStatus;
-  lawyerId: Types.ObjectId;
+  lawyerId?: Types.ObjectId | null;
+  customerId?: Types.ObjectId | null;
   customer: IMatterCustomer;
   queryId?: Types.ObjectId | null;
+  aiSessionId?: Types.ObjectId | null;
   internalNotes: IInternalNote[];
   clientUpdates: IClientUpdate[];
   tasks: IMatterTask[];
   importantDates: IImportantDate[];
+  timeline: IMatterTimelineEvent[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -96,6 +117,27 @@ const importantDateSchema = new Schema<IImportantDate>(
   { _id: true }
 );
 
+const timelineEventSchema = new Schema<IMatterTimelineEvent>(
+  {
+    title: { type: String, required: true, trim: true },
+    description: { type: String, trim: true },
+    eventType: {
+      type: String,
+      enum: [
+        'problem_submitted',
+        'document_uploaded',
+        'ai_analysis',
+        'lawyer_assigned',
+        'consultation',
+        'matter_updated'
+      ],
+      default: 'matter_updated'
+    },
+    createdAt: { type: Date, default: Date.now }
+  },
+  { _id: true }
+);
+
 const matterSchema = new Schema<IMatter>(
   {
     matterReference: {
@@ -116,6 +158,25 @@ const matterSchema = new Schema<IMatter>(
       trim: true,
       index: true
     },
+    description: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    aiSummary: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    importantFacts: {
+      type: [String],
+      default: []
+    },
+    selectedSolution: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     status: {
       type: String,
       enum: ['intake', 'active', 'pending_court', 'under_negotiation', 'resolved', 'closed'],
@@ -125,17 +186,28 @@ const matterSchema = new Schema<IMatter>(
     lawyerId: {
       type: Schema.Types.ObjectId,
       ref: 'Lawyer',
-      required: true,
+      default: null,
+      index: true
+    },
+    customerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Customer',
+      default: null,
       index: true
     },
     customer: {
       name: { type: String, required: true },
-      email: { type: String, required: true },
-      phone: { type: String, required: true }
+      email: { type: String, required: true, lowercase: true, trim: true },
+      phone: { type: String, default: '' }
     },
     queryId: {
       type: Schema.Types.ObjectId,
       ref: 'Query',
+      default: null
+    },
+    aiSessionId: {
+      type: Schema.Types.ObjectId,
+      ref: 'AISession',
       default: null
     },
     internalNotes: {
@@ -153,6 +225,10 @@ const matterSchema = new Schema<IMatter>(
     importantDates: {
       type: [importantDateSchema],
       default: []
+    },
+    timeline: {
+      type: [timelineEventSchema],
+      default: []
     }
   },
   {
@@ -161,6 +237,7 @@ const matterSchema = new Schema<IMatter>(
 );
 
 matterSchema.index({ lawyerId: 1, status: 1 });
+matterSchema.index({ customerId: 1, updatedAt: -1 });
+matterSchema.index({ 'customer.email': 1 });
 
 export const Matter = mongoose.model<IMatter>('Matter', matterSchema);
-

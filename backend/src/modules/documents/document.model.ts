@@ -6,9 +6,13 @@ export interface IDocumentRecord extends Document {
   name: string;
   documentType: string;
   matterId?: Types.ObjectId | null;
-  lawyerId: Types.ObjectId;
+  queryId?: Types.ObjectId | null;
+  lawyerId?: Types.ObjectId | null;
+  customerId?: Types.ObjectId | null;
   customerName: string;
+  uploadedByRole: 'customer' | 'lawyer';
   fileKey: string;
+  storagePath?: string;
   fileSize: number;
   mimeType: string;
   reviewStatus: DocReviewStatus;
@@ -22,9 +26,13 @@ const documentRecordSchema = new Schema<IDocumentRecord>(
     name: { type: String, required: true, trim: true },
     documentType: { type: String, required: true, trim: true },
     matterId: { type: Schema.Types.ObjectId, ref: 'Matter', default: null, index: true },
-    lawyerId: { type: Schema.Types.ObjectId, ref: 'Lawyer', required: true, index: true },
+    queryId: { type: Schema.Types.ObjectId, ref: 'Query', default: null, index: true },
+    lawyerId: { type: Schema.Types.ObjectId, ref: 'Lawyer', default: null, index: true },
+    customerId: { type: Schema.Types.ObjectId, ref: 'Customer', default: null, index: true },
     customerName: { type: String, required: true, trim: true },
+    uploadedByRole: { type: String, enum: ['customer', 'lawyer'], default: 'customer' },
     fileKey: { type: String, required: true, trim: true },
+    storagePath: { type: String, trim: true, select: false },
     fileSize: { type: Number, default: 0 },
     mimeType: { type: String, default: 'application/pdf' },
     reviewStatus: {
@@ -41,6 +49,6 @@ const documentRecordSchema = new Schema<IDocumentRecord>(
 );
 
 documentRecordSchema.index({ lawyerId: 1, matterId: 1 });
+documentRecordSchema.index({ customerId: 1, uploadedAt: -1 });
 
 export const DocumentRecord = mongoose.model<IDocumentRecord>('DocumentRecord', documentRecordSchema);
-

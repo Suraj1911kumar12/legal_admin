@@ -6,6 +6,7 @@ export type ConsultationStatus = 'pending' | 'accepted' | 'completed' | 'cancell
 export interface IConsultation extends Document {
   consultationReference: string;
   lawyerId: Types.ObjectId;
+  customerId?: Types.ObjectId | null;
   customer: {
     name: string;
     email: string;
@@ -41,9 +42,15 @@ const consultationSchema = new Schema<IConsultation>(
       required: true,
       index: true
     },
+    customerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Customer',
+      default: null,
+      index: true
+    },
     customer: {
       name: { type: String, required: true },
-      email: { type: String, required: true },
+      email: { type: String, required: true, lowercase: true, trim: true },
       phone: { type: String, required: true }
     },
     matterId: {

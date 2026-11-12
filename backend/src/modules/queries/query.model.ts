@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
-export type QueryStatus = 'pending' | 'assigned' | 'accepted' | 'declined' | 'closed';
+export type QueryStatus = 'draft' | 'pending' | 'assigned' | 'accepted' | 'declined' | 'closed';
 export type QueryUrgency = 'low' | 'medium' | 'high' | 'urgent';
 
 export interface IIntakeSummary {
@@ -12,6 +12,7 @@ export interface IIntakeSummary {
 }
 
 export interface IQueryDocument {
+  documentId?: Types.ObjectId | null;
   name: string;
   type: string;
   url: string;
@@ -24,8 +25,15 @@ export interface IQueryDeclineRecord {
   declinedAt: Date;
 }
 
+export interface IFollowUpAnswer {
+  question: string;
+  answer: string;
+  answeredAt: Date;
+}
+
 export interface IQuery extends Document {
   queryReference: string;
+  customerId?: Types.ObjectId | null;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -33,12 +41,16 @@ export interface IQuery extends Document {
   category: string;
   summary: string;
   specificQuestion: string;
+  preferredLanguage: string;
   urgency: QueryUrgency;
   status: QueryStatus;
+  isDraft: boolean;
+  clientSubmissionKey?: string;
   assignedLawyerId?: Types.ObjectId | null;
   acceptedAt?: Date;
   declinedBy: IQueryDeclineRecord[];
   documents: IQueryDocument[];
+  followUpAnswers: IFollowUpAnswer[];
   intakeSummary: IIntakeSummary;
   associatedMatterId?: Types.ObjectId | null;
   createdAt: Date;
@@ -54,6 +66,12 @@ const querySchema = new Schema<IQuery>(
       trim: true,
       index: true
     },
+    customerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Customer',
+      default: null,
+      index: true
+    },
     customerName: {
       type: String,
       required: true,
@@ -67,28 +85,33 @@ const querySchema = new Schema<IQuery>(
     },
     customerPhone: {
       type: String,
-      required: true,
+      default: '',
       trim: true
     },
     customerLocation: {
       type: String,
-      required: true,
+      default: '',
       trim: true
     },
     category: {
       type: String,
-      required: true,
+      default: 'General Legal',
       trim: true,
       index: true
     },
     summary: {
       type: String,
-      required: true,
+      default: '',
       trim: true
     },
     specificQuestion: {
       type: String,
-      required: true,
+      default: '',
+      trim: true
+    },
+    preferredLanguage: {
+      type: String,
+      default: 'en',
       trim: true
     },
     urgency: {
@@ -98,9 +121,18 @@ const querySchema = new Schema<IQuery>(
     },
     status: {
       type: String,
-      enum: ['pending', 'assigned', 'accepted', 'declined', 'closed'],
+      enum: ['draft', 'pending', 'assigned', 'accepted', 'declined', 'closed'],
       default: 'pending',
       index: true
+    },
+    isDraft: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    clientSubmissionKey: {
+      type: String,
+      trim: true
     },
     assignedLawyerId: {
       type: Schema.Types.ObjectId,
@@ -120,15 +152,23 @@ const querySchema = new Schema<IQuery>(
     ],
     documents: [
       {
+        documentId: { type: Schema.Types.ObjectId, ref: 'DocumentRecord', default: null },
         name: { type: String, required: true },
         type: { type: String, required: true },
-        url: { type: String, required: true },
+        url: { type: String, default: '' },
         size: { type: Number }
       }
     ],
+    followUpAnswers: [
+      {
+        question: { type: String, required: true },
+        answer: { type: String, required: true },
+        answeredAt: { type: Date, default: Date.now }
+      }
+    ],
     intakeSummary: {
-      aiSummary: { type: String, required: true },
-      likelyCategory: { type: String, required: true },
+      aiSummary: { type: String, default: '' },
+      likelyCategory: { type: String, default: 'General Legal' },
       confirmedFacts: { type: [String], default: [] },
       missingInformation: { type: [String], default: [] },
       recommendedNextSteps: { type: [String], default: [] }
@@ -146,6 +186,6 @@ const querySchema = new Schema<IQuery>(
 
 querySchema.index({ category: 1, status: 1 });
 querySchema.index({ customerEmail: 1 });
+querySchema.index({ customerId: 1, clientSubmissionKey: 1 }, { sparse: true });
 
 export const Query = mongoose.model<IQuery>('Query', querySchema);
-

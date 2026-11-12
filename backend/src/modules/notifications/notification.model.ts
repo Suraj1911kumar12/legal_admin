@@ -1,9 +1,17 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
-export type NotificationType = 'query' | 'matter' | 'message' | 'consultation' | 'system';
+export type NotificationType =
+  | 'query'
+  | 'matter'
+  | 'message'
+  | 'consultation'
+  | 'document'
+  | 'ai'
+  | 'system';
 
 export interface INotification extends Document {
   recipientId: Types.ObjectId;
+  recipientType: 'lawyer' | 'customer';
   title: string;
   message: string;
   type: NotificationType;
@@ -16,8 +24,13 @@ const notificationSchema = new Schema<INotification>(
   {
     recipientId: {
       type: Schema.Types.ObjectId,
-      ref: 'Lawyer',
       required: true,
+      index: true
+    },
+    recipientType: {
+      type: String,
+      enum: ['lawyer', 'customer'],
+      default: 'lawyer',
       index: true
     },
     title: {
@@ -32,7 +45,7 @@ const notificationSchema = new Schema<INotification>(
     },
     type: {
       type: String,
-      enum: ['query', 'matter', 'message', 'consultation', 'system'],
+      enum: ['query', 'matter', 'message', 'consultation', 'document', 'ai', 'system'],
       default: 'system'
     },
     link: {
@@ -49,7 +62,6 @@ const notificationSchema = new Schema<INotification>(
   }
 );
 
-notificationSchema.index({ recipientId: 1, createdAt: -1 });
+notificationSchema.index({ recipientId: 1, recipientType: 1, createdAt: -1 });
 
 export const Notification = mongoose.model<INotification>('Notification', notificationSchema);
-

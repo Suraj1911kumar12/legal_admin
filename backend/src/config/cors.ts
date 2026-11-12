@@ -1,7 +1,7 @@
 import cors, { CorsOptions } from 'cors';
 import { env } from './env';
 
-const originsList = `${env.ADMIN_ORIGIN},${env.LAWYER_ORIGIN}`;
+const originsList = `${env.ADMIN_ORIGIN},${env.LAWYER_ORIGIN},${env.CUSTOMER_ORIGIN}`;
 const allowedOrigins = originsList
   .split(',')
   .map((origin) => origin.trim())
